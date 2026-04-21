@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Métro Paris — Apprendre les stations</title>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=Outfit:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d12;
+    --card: #16161f;
+    --border: #2a2a38;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #f5c518;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(13,13,18,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo-m {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 2.2rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  header h1 {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1.4rem;
+    color: var(--text);
+  }
+  header span.sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 300;
+  }
+  .mode-toggle {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .mode-btn {
+    padding: 8px 18px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .mode-btn:hover:not(.active) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* MAIN */
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+  /* LINE SELECTOR */
+  .line-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .line-chip {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .line-chip:hover { transform: scale(1.12); }
+  .line-chip.selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
+    transform: scale(1.12);
+  }
+
+  /* BROWSE MODE */
+  #browse-mode { display: block; }
+  #quiz-mode { display: none; }
+
+  .section-title {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+  }
+  .section-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* STATION DIAGRAM (vertical) */
+  .line-diagram {
+    display: flex;
+    flex-direction: column;
+    max-width: 520px;
+  }
+  .station-row {
+    display: flex;
+    align-items: stretch;
+    min-height: 48px;
+  }
+  .rail-col {
+    width: 40px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .rail-line {
+    width: 4px;
+    background: var(--line-col, #888);
+    flex: 1;
+  }
+  .rail-line.hidden { background: transparent; }
+  .rail-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--line-col, #888);
+    border: 3px solid var(--bg);
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .rail-dot.terminus-dot {
+    width: 18px;
+    height: 18px;
+    border: 4px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--line-col, #888);
+  }
+  .station-info {
+    flex: 1;
+    padding: 6px 0 6px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .station-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .station-name.is-terminus {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--line-col, #fff);
+  }
+  .station-idx {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-right: 5px;
+  }
+  .correspondances {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  .corr-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 5px;
+    border-radius: 4px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .corr-badge.rer {
+    border-radius: 3px;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.7rem;
+  }
+
+  /* BRANCHES */
+  .branch-split {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+  .branch-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .branch-col:first-child { padding-right: 8px; }
+  .branch-col:last-child  { padding-left: 8px; border-left: 1px solid var(--border); }
+  .branch-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 4px 0 6px 14px;
+    letter-spacing: 0.3px;
+  }
+
+
+  .quiz-setup {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+  .quiz-setup h2 {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+  .quiz-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .quiz-opt-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-width: 180px;
+  }
+  .start-btn {
+    padding: 12px 32px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .start-btn:hover { opacity: 0.85; }
+
+  /* QUIZ CARD */
+  .quiz-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    text-align: center;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .quiz-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    opacity: 0.08;
+    background: var(--line-color, #fff);
+  }
+  .quiz-line-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    background: var(--line-color, #888);
+    color: var(--line-text, #fff);
+    margin-bottom: 12px;
+  }
+  .quiz-question {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .quiz-station-display {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 2.8rem;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .quiz-hint {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  /* Answers grid */
+  .answers-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .answer-btn {
+    padding: 14px 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+  .answer-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(245,197,24,0.07);
+  }
+  .answer-btn.correct {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+  .answer-btn.wrong {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  .answer-btn:disabled { cursor: default; }
+
+  /* Text input mode */
+  .answer-input-wrap {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .answer-input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .answer-input:focus { border-color: var(--accent); }
+  .answer-input.correct { border-color: #22c55e; color: #22c55e; }
+  .answer-input.wrong { border-color: #ef4444; color: #ef4444; }
+  .submit-btn {
+    padding: 14px 22px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Progress / Score */
+  .quiz-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .score-badge {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .feedback {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    min-height: 20px;
+  }
+  .feedback.ok { color: #22c55e; }
+  .feedback.ko { color: #ef4444; }
+  .next-btn {
+    margin-top: 20px;
+    padding: 11px 28px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .next-btn:hover { background: rgba(245,197,24,0.1); }
+
+  /* Results screen */
+  .results {
+    text-align: center;
+    padding: 48px;
+  }
+  .results h2 {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 3rem;
+    margin-bottom: 8px;
+  }
+  .score-big {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 5rem;
+    color: var(--accent);
+    line-height: 1;
+    margin: 16px 0;
+  }
+  .results p { color: var(--muted); font-size: 0.9rem; margin-bottom: 28px; }
+
+  .missed-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    margin: 16px 0 28px;
+  }
+  .missed-tag {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+  }
+
+  .dir-btn {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dir-btn.dir-active {
+    background: var(--lc, #888);
+    color: #000;
+    border-color: var(--lc, #888);
+    font-weight: 700;
+  }
+  .dir-btn:hover:not(.dir-active) {
+    border-color: var(--lc, #888);
+    color: var(--text);
+  }
+
+
+  @media (max-width: 600px) {
+    header { padding: 14px 16px; }
+    .logo-m { font-size: 1.6rem; }
+    main { padding: 20px 14px; }
+    .answers-grid { grid-template-columns: 1fr; }
+    .quiz-station-display { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-m">M</div>
+  <div>
+    <h1>MÉTRO PARIS</h1>
+    <div class="sub">APPRENDRE LES STATIONS</div>
+  </div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-browse" onclick="setMode('browse')">Explorer</button>
+    <button class="mode-btn" id="btn-quiz" onclick="setMode('quiz')">Quiz</button>
+  </div>
+</header>
+
+<main>
+
+<!-- BROWSE MODE -->
+<div id="browse-mode">
+  <div class="section-title">CHOISIR UNE LIGNE</div>
+  <div class="section-sub">Cliquer sur une ligne pour afficher ses stations dans l'ordre</div>
+  <div class="line-grid" id="line-grid-browse"></div>
+  <div id="browse-content"></div>
+</div>
+
+<!-- QUIZ MODE -->
+<div id="quiz-mode">
+  <div class="quiz-setup">
+    <h2>PARAMÈTRES DU QUIZ</h2>
+    <div class="quiz-options">
+      <div>
+        <span class="quiz-opt-label">Ligne(s)</span>
+        <select id="q-line">
+          <option value="all">Toutes les lignes</option>
+        </select>
+      </div>
+      <div>
+        <span class="quiz-opt-label">Type de question</span>
+        <select id="q-type">
+          <option value="next">Quelle est la station suivante ?</option>
+          <option value="prev">Quelle est la station précédente ?</option>
+          <option value="line">Sur quelle ligne est cette station ?</option>
+          <option value="order">Remettre dans l'ordre (4 stations)</option>
+        </select>
+      </div>
+      <div>
+        <span class="quiz-opt-label">Mode de réponse</span>
+        <select id="q-mode">
+          <option value="qcm">QCM (4 choix)</option>
+          <option value="text">Saisie libre</option>
+        </select>
+      </div>
+      <div>
+        <span class="quiz-opt-label">Nombre de questions</span>
+        <select id="q-count">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="40">40</option>
+        </select>
+      </div>
+    </div>
+    <button class="start-btn" onclick="startQuiz()">▶ DÉMARRER</button>
+  </div>
+
+  <div id="quiz-area"></div>
+</div>
+
+</main>
+
+<script>
+// ========================
+// DATA — toutes les lignes
+// ========================
+const LINES = {
+  "1": {
+    color: "#FFBE00", text: "#000",
+    stations: ["La Défense","Esplanade de La Défense","Pont de Neuilly","Les Sablons","Porte Maillot","Argentine","Charles de Gaulle - Étoile","George V","Franklin D. Roosevelt","Champs-Élysées - Clemenceau","Concorde","Tuileries","Palais Royal - Musée du Louvre","Louvre - Rivoli","Châtelet","Hôtel de Ville","Saint-Paul","Bastille","Gare de Lyon","Reuilly - Diderot","Nation","Porte de Vincennes","Saint-Mandé","Bérault","Château de Vincennes"]
+  },
+  "2": {
+    color: "#003CA6", text: "#fff",
+    stations: ["Porte Dauphine","Victor Hugo","Charles de Gaulle - Étoile","Ternes","Courcelles","Monceau","Villiers","Rome","Place de Clichy","Blanche","Pigalle","Anvers","Barbès - Rochechouart","La Chapelle","Stalingrad","Jaurès","Colonel Fabien","Belleville","Couronnes","Ménilmontant","Père Lachaise","Philippe Auguste","Alexandre Dumas","Avron","Nation"]
+  },
+  "3": {
+    color: "#6E6E00", text: "#fff",
+    stations: ["Pont de Levallois - Bécon","Anatole France","Louise Michel","Porte de Champerret","Pereire","Wagram","Malesherbes","Villiers","Europe","Saint-Lazare","Havre - Caumartin","Opéra","Quatre-Septembre","Bourse","Sentier","Réaumur - Sébastopol","Arts et Métiers","Temple","République","Parmentier","Rue Saint-Maur","Père Lachaise","Gambetta","Porte de Bagnolet","Gallieni"]
+  },
+  "3b": {
+    color: "#82C8E6", text: "#000",
+    stations: ["Gambetta","Saint-Fargeau","Pelleport","Porte des Lilas"]
+  },
+  "4": {
+    color: "#BE4B98", text: "#fff",
+    stations: ["Porte de Clignancourt","Simplon","Marcadet - Poissonniers","Château Rouge","Barbès - Rochechouart","Gare du Nord","Gare de l'Est","Château d'Eau","Strasbourg - Saint-Denis","Réaumur - Sébastopol","Étienne Marcel","Les Halles","Châtelet","Cité","Saint-Michel","Odéon","Saint-Germain-des-Prés","Saint-Sulpice","Saint-Placide","Montparnasse - Bienvenüe","Vavin","Raspail","Denfert-Rochereau","Mouton-Duvernet","Alésia","Porte d'Orléans","Mairie de Montrouge","Bagneux - Lucie Aubrac","Barbara","Montrouge"]
+  },
+  "5": {
+    color: "#FF7E2E", text: "#000",
+    stations: ["Bobigny - Pablo Picasso","Bobigny - Pantin - Raymond Queneau","Église de Pantin","Hoche","Porte de Pantin","Ourq","Laumière","Jaurès","Stalingrad","Gare du Nord","Gare de l'Est","Jacques Bonsergent","République","Oberkampf","Richard-Lenoir","Bréguet - Sabin","Bastille","Quai de la Rapée","Gare d'Austerlitz","Saint-Marcel","Campo-Formio","Place d'Italie"]
+  },
+  "6": {
+    color: "#6ECA97", text: "#000",
+    stations: ["Charles de Gaulle - Étoile","Kléber","Boissière","Trocadéro","Passy","Bir-Hakeim","Dupleix","La Motte-Picquet - Grenelle","Cambronne","Sèvres - Lecourbe","Pasteur","Montparnasse - Bienvenüe","Edgar Quinet","Raspail","Denfert-Rochereau","Saint-Jacques","Glacière","Corvisart","Place d'Italie","Nationale","Chevaleret","Quai de la Gare","Bercy","Dugommier","Daumesnil","Bel-Air","Picpus","Nation"]
+  },
+  "7": {
+    color: "#FA9ABA", text: "#000",
+    trunk: ["La Courneuve - 8 Mai 1945","Fort d'Aubervilliers","Aubervilliers - Pantin - Quatre Chemins","Porte de la Villette","Corentin Cariou","Crimée","Riquet","Stalingrad","Louis Blanc","Château-Landon","Gare de l'Est","Poissonnière","Cadet","Le Peletier","Chaussée d'Antin - La Fayette","Opéra","Pyramides","Palais Royal - Musée du Louvre","Pont Neuf","Châtelet","Pont Marie","Sully - Morland","Jussieu","Place Monge","Censier - Daubenton","Les Gobelins","Place d'Italie","Tolbiac","Maison Blanche"],
+    branches: [
+      { label: "Villejuif", stations: ["Kremlin-Bicêtre","Villejuif - Léo Lagrange","Villejuif - Paul Vaillant-Couturier","Villejuif - Louis Aragon"] },
+      { label: "Mairie d'Ivry", stations: ["Le Kremlin-Bicêtre","Porte d'Italie","Porte de Choisy","Porte d'Ivry","Pierre et Marie Curie","Mairie d'Ivry"] }
+    ]
+  },
+  "7b": {
+    color: "#82DC73", text: "#000",
+    // Boucle : Louis Blanc→Pré Saint-Gervais via Place des Fêtes / retour via Danube
+    trunk: ["Louis Blanc","Jaurès","Bolivar","Buttes Chaumont","Botzaris"],
+    branches: [
+      { label: "→ Pré Saint-Gervais", stations: ["Place des Fêtes","Pré Saint-Gervais"] },
+      { label: "← Louis Blanc (retour)", stations: ["Danube"] }
+    ]
+  },
+  "8": {
+    color: "#E19BDF", text: "#000",
+    stations: ["Balard","Lourmel","Boucicaut","Félix Faure","Commerce","La Motte-Picquet - Grenelle","École Militaire","La Tour-Maubourg","Invalides","Concorde","Madeleine","Opéra","Richelieu - Drouot","Grands Boulevards","Bonne Nouvelle","Strasbourg - Saint-Denis","République","Filles du Calvaire","Saint-Sébastien - Froissart","Chemin Vert","Bastille","Ledru-Rollin","Faidherbe - Chaligny","Reuilly - Diderot","Montgallet","Daumesnil","Michel Bizot","Porte Dorée","Porte de Charenton","Liberté","Charenton - Écoles","École Vétérinaire de Maisons-Alfort","Maisons-Alfort - Stade","Maisons-Alfort - Les Juilliottes","Créteil - L'Échat","Créteil - Université","Créteil - Préfecture","Pointe du Lac"]
+  },
+  "9": {
+    color: "#B6BD00", text: "#000",
+    stations: ["Pont de Sèvres","Billancourt","Marcel Sembat","Porte de Saint-Cloud","Exelmans","Michel-Ange - Molitor","Michel-Ange - Auteuil","Jasmin","Ranelagh","La Muette","Rue de la Pompe","Trocadéro","Iéna","Alma - Marceau","Franklin D. Roosevelt","Saint-Philippe du Roule","Miromesnil","Saint-Augustin","Havre - Caumartin","Chaussée d'Antin - La Fayette","Richelieu - Drouot","Grands Boulevards","Bonne Nouvelle","Strasbourg - Saint-Denis","République","Oberkampf","Saint-Ambroise","Voltaire","Charonne","Rue des Boulets","Nation","Buzenval","Maraîchers","Porte de Montreuil","Robespierre","Croix de Chavaux","Mairie de Montreuil"]
+  },
+  "10": {
+    color: "#C9910D", text: "#000",
+    trunk: ["Boulogne - Pont de Saint-Cloud","Boulogne - Jean Jaurès"],
+    branches: [
+      { label: "via Michel-Ange - Molitor", stations: ["Michel-Ange - Molitor","Chardon-Lagache"] },
+      { label: "via Michel-Ange - Auteuil", stations: ["Michel-Ange - Auteuil","Église d'Auteuil","Porte d'Auteuil","Chardon-Lagache"] }
+    ],
+    trunk2: ["Mirabeau","Javel - André Citroën","Charles Michels","Avenue Émile Zola","La Motte-Picquet - Grenelle","Ségur","Duroc","Vaneau","Sèvres - Babylone","Mabillon","Odéon","Cluny - La Sorbonne","Maubert - Mutualité","Cardinal Lemoine","Jussieu","Gare d'Austerlitz"]
+  },
+  "11": {
+    color: "#704B1C", text: "#fff",
+    stations: ["Châtelet","Hôtel de Ville","Rambuteau","Arts et Métiers","République","Goncourt","Belleville","Pyrénées","Jourdain","Place des Fêtes","Télégraphe","Porte des Lilas","Mairie des Lilas","Romainville - Carnot","Clichy-Montfermeil"]
+  },
+  "12": {
+    color: "#007852", text: "#fff",
+    stations: ["Mairie d'Issy","Corentin Celton","Issy - Val de Seine","Vaugirard","Convention","Volontaires","Falguière","Pasteur","Montparnasse - Bienvenüe","Notre-Dame-des-Champs","Rennes","Sèvres - Babylone","Rue du Bac","Solférino","Assemblée Nationale","Concorde","Madeleine","Saint-Lazare","Trinité - d'Estienne d'Orves","Notre-Dame-de-Lorette","Saint-Georges","Pigalle","Abbesses","Lamarck - Caulaincourt","Jules Joffrin","Marcadet - Poissonniers","Marx Dormoy","Porte de la Chapelle","Front Populaire"]
+  },
+  "13": {
+    color: "#6EC4E8", text: "#000",
+    trunk: ["Châtillon - Montrouge","Malakoff - Plateau de Vanves","Malakoff - Rue Étienne Dolet","Montrouge","Alésia","Plaisance","Pernety","Gaîté","Montparnasse - Bienvenüe","Duroc","Saint-François-Xavier","Varenne","Invalides","Champs-Élysées - Clemenceau","Miromesnil","Saint-Lazare","Liège","Place de Clichy","La Fourche"],
+    branches: [
+      { label: "Asnières", stations: ["Guy Môquet","Brochant","Porte de Clichy","Garibaldi","Les Agnettes","Gennevilliers","Gabriel Péri","Asnières - Gennevilliers - Les Courtilles"] },
+      { label: "Saint-Denis", stations: ["Porte de Saint-Ouen","Carrefour Pleyel","Mairie de Saint-Ouen","Saint-Denis - Porte de Paris","Basilique de Saint-Denis","Saint-Denis - Université"] }
+    ]
+  },
+  "14": {
+    color: "#62259D", text: "#fff",
+    stations: ["Saint-Denis - Pleyel","Mairie de Saint-Ouen","Saint-Ouen","Porte de Clichy","Pont Cardinet","Gare Saint-Lazare","Madeleine","Pyramides","Châtelet","Gare de Lyon","Bercy","Cour Saint-Émilion","Bibliothèque François Mitterrand","Olympiades","Maison Blanche","Hôpital Bicêtre","Villejuif - Gustave Roussy","L'Haÿ-les-Roses","Chevilly-Larue","Thiais - Orly","Aéroport d'Orly"]
+  }
+};
+
+// Ordre d'affichage : 3bis après 3, 7bis après 7
+const LINE_DISPLAY_ORDER = ["1","2","3","3b","4","5","6","7","7b","8","9","10","11","12","13","14"];
+const LINE_NAMES = LINE_DISPLAY_ORDER;
+
+// Normalize for comparison
+function normalize(s) {
+  return s.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")
+    .trim();
+}
+
+// ========================
+// CORRESPONDANCES — source : plandeparis.info (officiel RATP)
+// ========================
+const CORRESPONDANCES = {
+  // ── L1 ──
+  "La Défense":                        { rer: ["A"], tram: ["T2"], sncf: true },
+  "Esplanade de La Défense":           {},
+  "Pont de Neuilly":                   {},
+  "Les Sablons":                       {},
+  "Porte Maillot":                     { rer: ["C"] },
+  "Argentine":                         {},
+  "Charles de Gaulle - Étoile":        { metro: ["2","6"], rer: ["A"] },
+  "George V":                          {},
+  "Franklin D. Roosevelt":             { metro: ["9"] },
+  "Champs-Élysées - Clemenceau":       { metro: ["13"] },
+  "Concorde":                          { metro: ["8","12"] },
+  "Tuileries":                         {},
+  "Palais Royal - Musée du Louvre":    { metro: ["7"] },
+  "Louvre - Rivoli":                   {},
+  "Châtelet":                          { metro: ["4","7","11","14"], rer: ["A","B","D"] },
+  "Hôtel de Ville":                    { metro: ["11"] },
+  "Saint-Paul":                        {},
+  "Bastille":                          { metro: ["5","8"] },
+  "Gare de Lyon":                      { metro: ["14"], rer: ["A","D"], sncf: true },
+  "Reuilly - Diderot":                 { metro: ["8"] },
+  "Nation":                            { metro: ["2","6","9"], rer: ["A"] },
+  "Porte de Vincennes":                {},
+  "Saint-Mandé":                       {},
+  "Bérault":                           {},
+  "Château de Vincennes":              {},
+  // ── L2 ──
+  "Porte Dauphine":                    { rer: ["C"] },
+  "Victor Hugo":                       {},
+  "Ternes":                            {},
+  "Courcelles":                        {},
+  "Monceau":                           {},
+  "Villiers":                          { metro: ["3"] },
+  "Rome":                              {},
+  "Place de Clichy":                   { metro: ["13"] },
+  "Blanche":                           {},
+  "Pigalle":                           { metro: ["12"] },
+  "Anvers":                            {},
+  "Barbès - Rochechouart":             { metro: ["4"] },
+  "La Chapelle":                       { rer: ["B","D","E"], sncf: true },
+  "Stalingrad":                        { metro: ["5","7"] },
+  "Jaurès":                            { metro: ["5","7b"] },
+  "Colonel Fabien":                    {},
+  "Belleville":                        { metro: ["11"] },
+  "Couronnes":                         {},
+  "Ménilmontant":                      {},
+  "Père Lachaise":                     { metro: ["3"] },
+  "Philippe Auguste":                  {},
+  "Alexandre Dumas":                   {},
+  "Avron":                             {},
+  // ── L3 ──
+  "Pont de Levallois - Bécon":         {},
+  "Anatole France":                    {},
+  "Louise Michel":                     {},
+  "Porte de Champerret":               {},
+  "Pereire":                           { rer: ["C"] },
+  "Wagram":                            {},
+  "Malesherbes":                       {},
+  "Europe":                            {},
+  "Saint-Lazare":                      { metro: ["7","8","9","12","13","14"], rer: ["A","E"], sncf: true },
+  "Havre - Caumartin":                 { metro: ["9"] },
+  "Opéra":                             { metro: ["7","8","9","12","13","14"], rer: ["A"] },
+  "Quatre-Septembre":                  {},
+  "Bourse":                            {},
+  "Sentier":                           {},
+  "Réaumur - Sébastopol":              { metro: ["4"] },
+  "Arts et Métiers":                   { metro: ["11"] },
+  "Temple":                            {},
+  "République":                        { metro: ["5","8","9","11"] },
+  "Parmentier":                        {},
+  "Rue Saint-Maur":                    {},
+  "Gambetta":                          { metro: ["3b"] },
+  "Porte de Bagnolet":                 {},
+  "Gallieni":                          {},
+  // ── L3bis ──
+  "Saint-Fargeau":                     {},
+  "Pelleport":                         {},
+  "Porte des Lilas":                   { metro: ["11"] },
+  // ── L4 ──
+  "Porte de Clignancourt":             {},
+  "Simplon":                           {},
+  "Marcadet - Poissonniers":           { metro: ["12"] },
+  "Château Rouge":                     {},
+  "Barbès - Rochechouart":             { metro: ["2"] },
+  "Gare du Nord":                      { metro: ["5"], rer: ["B","D","E"], sncf: true },
+  "Gare de l'Est":                     { metro: ["5","7"], sncf: true },
+  "Château d'Eau":                     {},
+  "Strasbourg - Saint-Denis":          { metro: ["8","9"] },
+  "Étienne Marcel":                    {},
+  "Les Halles":                        { rer: ["A","B","D"] },
+  "Cité":                              {},
+  "Saint-Michel":                      { metro: ["10"], rer: ["B","C"] },
+  "Odéon":                             { metro: ["10"] },
+  "Saint-Germain-des-Prés":            {},
+  "Saint-Sulpice":                     {},
+  "Saint-Placide":                     {},
+  "Montparnasse - Bienvenüe":          { metro: ["6","12","13"], sncf: true },
+  "Vavin":                             {},
+  "Raspail":                           { metro: ["6"] },
+  "Denfert-Rochereau":                 { metro: ["6"], rer: ["B"] },
+  "Mouton-Duvernet":                   {},
+  "Alésia":                            {},
+  "Porte d'Orléans":                   {},
+  "Mairie de Montrouge":               {},
+  "Bagneux - Lucie Aubrac":            {},
+  "Barbara":                           {},
+  "Montrouge":                         {},
+  // ── L5 ──
+  "Bobigny - Pablo Picasso":           { tram: ["T1"] },
+  "Bobigny - Pantin - Raymond Queneau":{},
+  "Église de Pantin":                  {},
+  "Hoche":                             {},
+  "Porte de Pantin":                   {},
+  "Ourq":                              {},
+  "Laumière":                          {},
+  "Gare du Nord":                      { metro: ["4"], rer: ["B","D","E"], sncf: true },
+  "Jacques Bonsergent":                {},
+  "Oberkampf":                         { metro: ["9"] },
+  "Richard-Lenoir":                    {},
+  "Bréguet - Sabin":                   {},
+  "Quai de la Rapée":                  {},
+  "Saint-Marcel":                      {},
+  "Campo-Formio":                      {},
+  // ── L6 ──
+  "Kléber":                            {},
+  "Boissière":                         {},
+  "Trocadéro":                         { metro: ["9"] },
+  "Passy":                             {},
+  "Bir-Hakeim":                        { rer: ["C"] },
+  "Dupleix":                           {},
+  "La Motte-Picquet - Grenelle":       { metro: ["8","10"] },
+  "Cambronne":                         {},
+  "Sèvres - Lecourbe":                 {},
+  "Pasteur":                           { metro: ["12"] },
+  "Edgar Quinet":                      {},
+  "Saint-Jacques":                     {},
+  "Glacière":                          {},
+  "Corvisart":                         {},
+  "Nationale":                         {},
+  "Chevaleret":                        {},
+  "Quai de la Gare":                   {},
+  "Bercy":                             { metro: ["14"] },
+  "Dugommier":                         {},
+  "Daumesnil":                         { metro: ["8"] },
+  "Bel-Air":                           {},
+  "Picpus":                            {},
+  // ── L7 ──
+  "La Courneuve - 8 Mai 1945":         { tram: ["T1"] },
+  "Fort d'Aubervilliers":              {},
+  "Aubervilliers - Pantin - Quatre Chemins": {},
+  "Porte de la Villette":              {},
+  "Corentin Cariou":                   {},
+  "Crimée":                            {},
+  "Riquet":                            {},
+  "Louis Blanc":                       { metro: ["7b"] },
+  "Château-Landon":                    { sncf: true },
+  "Poissonnière":                      {},
+  "Cadet":                             {},
+  "Le Peletier":                       {},
+  "Chaussée d'Antin - La Fayette":     { metro: ["9"] },
+  "Pyramides":                         { metro: ["14"] },
+  "Pont Neuf":                         {},
+  "Pont Marie":                        {},
+  "Sully - Morland":                   {},
+  "Jussieu":                           { metro: ["10"] },
+  "Place Monge":                       {},
+  "Censier - Daubenton":               {},
+  "Les Gobelins":                      {},
+  "Place d'Italie":                    { metro: ["5","6"] },
+  "Tolbiac":                           {},
+  "Maison Blanche":                    { metro: ["14"] },
+  "Kremlin-Bicêtre":                   {},
+  "Villejuif - Léo Lagrange":          {},
+  "Villejuif - Paul Vaillant-Couturier":{},
+  "Villejuif - Louis Aragon":          {},
+  // ── L7bis ──
+  "Bolivar":                           {},
+  "Buttes Chaumont":                   {},
+  "Botzaris":                          {},
+  "Place des Fêtes":                   { metro: ["11"] },
+  "Danube":                            {},
+  "Pré Saint-Gervais":                 {},
+  // ── L8 ──
+  "Balard":                            { tram: ["T2","T3a"] },
+  "Lourmel":                           {},
+  "Boucicaut":                         {},
+  "Félix Faure":                       {},
+  "Commerce":                          {},
+  "École Militaire":                   {},
+  "La Tour-Maubourg":                  {},
+  "Invalides":                         { metro: ["13"], rer: ["C"] },
+  "Madeleine":                         { metro: ["12","14"] },
+  "Richelieu - Drouot":                { metro: ["9"] },
+  "Grands Boulevards":                 { metro: ["9"] },
+  "Bonne Nouvelle":                    { metro: ["9"] },
+  "Filles du Calvaire":                {},
+  "Saint-Sébastien - Froissart":       {},
+  "Chemin Vert":                       {},
+  "Ledru-Rollin":                      {},
+  "Faidherbe - Chaligny":              {},
+  "Reuilly - Diderot":                 { metro: ["1"] },
+  "Montgallet":                        {},
+  "Michel Bizot":                      {},
+  "Porte Dorée":                       { tram: ["T3a"] },
+  "Porte de Charenton":                { tram: ["T3a"] },
+  "Liberté":                           {},
+  "Charenton - Écoles":                {},
+  "École Vétérinaire de Maisons-Alfort":{},
+  "Maisons-Alfort - Stade":            {},
+  "Maisons-Alfort - Les Juilliottes":  {},
+  "Créteil - L'Échat":                 {},
+  "Créteil - Université":              {},
+  "Créteil - Préfecture":              {},
+  "Pointe du Lac":                     {},
+  // ── L9 ──
+  "Pont de Sèvres":                    { tram: ["T2"] },
+  "Billancourt":                       {},
+  "Marcel Sembat":                     {},
+  "Porte de Saint-Cloud":              {},
+  "Exelmans":                          {},
+  "Michel-Ange - Molitor":             { metro: ["10"] },
+  "Michel-Ange - Auteuil":             { metro: ["10"] },
+  "Jasmin":                            {},
+  "Ranelagh":                          {},
+  "La Muette":                         { rer: ["C"] },
+  "Rue de la Pompe":                   {},
+  "Iéna":                              {},
+  "Alma - Marceau":                    {},
+  "Saint-Philippe du Roule":           {},
+  "Miromesnil":                        { metro: ["13"] },
+  "Saint-Augustin":                    {},
+  "Chaussée d'Antin - La Fayette":     { metro: ["7"] },
+  "Saint-Ambroise":                    {},
+  "Voltaire":                          {},
+  "Charonne":                          {},
+  "Rue des Boulets":                   {},
+  "Buzenval":                          {},
+  "Maraîchers":                        {},
+  "Porte de Montreuil":                { tram: ["T3a"] },
+  "Robespierre":                       {},
+  "Croix de Chavaux":                  {},
+  "Mairie de Montreuil":               {},
+  // ── L10 ──
+  "Boulogne - Pont de Saint-Cloud":    { tram: ["T2"] },
+  "Boulogne - Jean Jaurès":            {},
+  "Église d'Auteuil":                  {},
+  "Porte d'Auteuil":                   {},
+  "Mirabeau":                          {},
+  "Javel - André Citroën":             { rer: ["C"] },
+  "Charles Michels":                   {},
+  "Avenue Émile Zola":                 {},
+  "Ségur":                             {},
+  "Duroc":                             { metro: ["13"] },
+  "Vaneau":                            {},
+  "Sèvres - Babylone":                 { metro: ["12"] },
+  "Mabillon":                          {},
+  "Maubert - Mutualité":               {},
+  "Cardinal Lemoine":                  {},
+  "Gare d'Austerlitz":                 { metro: ["5"], rer: ["C"], sncf: true },
+  // ── L11 ──
+  "Rambuteau":                         {},
+  "Pyrénées":                          {},
+  "Jourdain":                          {},
+  "Goncourt":                          {},
+  "Télégraphe":                        {},
+  "Mairie des Lilas":                  {},
+  "Romainville - Carnot":              {},
+  "Clichy-Montfermeil":                {},
+  // ── L12 ──
+  "Mairie d'Issy":                     {},
+  "Corentin Celton":                   {},
+  "Issy - Val de Seine":               { rer: ["C"] },
+  "Vaugirard":                         {},
+  "Convention":                        {},
+  "Volontaires":                       {},
+  "Falguière":                         {},
+  "Notre-Dame-des-Champs":             {},
+  "Rennes":                            {},
+  "Rue du Bac":                        {},
+  "Solférino":                         { rer: ["C"] },
+  "Assemblée Nationale":               {},
+  "Trinité - d'Estienne d'Orves":      {},
+  "Notre-Dame-de-Lorette":             {},
+  "Saint-Georges":                     {},
+  "Abbesses":                          {},
+  "Lamarck - Caulaincourt":            {},
+  "Jules Joffrin":                     {},
+  "Marx Dormoy":                       {},
+  "Porte de la Chapelle":              { tram: ["T8"] },
+  "Front Populaire":                   {},
+  // ── L13 ──
+  "Malakoff - Plateau de Vanves":      {},
+  "Malakoff - Rue Étienne Dolet":      {},
+  "Montrouge":                         {},
+  "Plaisance":                         {},
+  "Pernety":                           {},
+  "Gaîté":                             {},
+  "Saint-François-Xavier":             {},
+  "Varenne":                           {},
+  "Champs-Élysées - Clemenceau":       { metro: ["1"] },
+  "Liège":                             {},
+  "La Fourche":                        {},
+  "Guy Môquet":                        {},
+  "Brochant":                          {},
+  "Porte de Clichy":                   { metro: ["14"], rer: ["C"] },
+  "Garibaldi":                         {},
+  "Les Agnettes":                      {},
+  "Gennevilliers":                     {},
+  "Gabriel Péri":                      {},
+  "Asnières - Gennevilliers - Les Courtilles": {},
+  // ── L13 branches ──
+  "Porte de Saint-Ouen":               {},
+  "Carrefour Pleyel":                  {},
+  "Saint-Denis - Porte de Paris":      { tram: ["T1"] },
+  "Basilique de Saint-Denis":          { tram: ["T1"] },
+  "Saint-Denis - Université":          {},
+  // ── L7 branches ──
+  "Le Kremlin-Bicêtre":                {},
+  "Porte d'Italie":                    { tram: ["T3a"] },
+  "Porte de Choisy":                   { tram: ["T3a"] },
+  "Porte d'Ivry":                      { tram: ["T3a"] },
+  "Pierre et Marie Curie":             {},
+  "Mairie d'Ivry":                     {},
+  // ── L14 ──
+  "Saint-Denis - Pleyel":              { rer: ["D"] },
+  "Mairie de Saint-Ouen":              { metro: ["13"] },
+  "Saint-Ouen":                        { rer: ["C"] },
+  "Porte de Clichy":                   { metro: ["13"], rer: ["C"], tram: ["T3b"] },
+  "Pont Cardinet":                     { sncf: true },
+  "Gare Saint-Lazare":                 { metro: ["3","12","13"], rer: ["A","C","E"], sncf: true },
+  "Madeleine":                         { metro: ["8","12"] },
+  "Pyramides":                         { metro: ["7"] },
+  "Châtelet":                          { metro: ["1","4","7","11"], rer: ["A","B","D"] },
+  "Gare de Lyon":                      { metro: ["1"], rer: ["A","D"], sncf: true },
+  "Bercy":                             { metro: ["6"] },
+  "Cour Saint-Émilion":                {},
+  "Bibliothèque François Mitterrand":  { rer: ["C"] },
+  "Olympiades":                        {},
+  "Maison Blanche":                    { metro: ["7"] },
+  "Hôpital Bicêtre":                   {},
+  "Villejuif - Gustave Roussy":        {},
+  "L'Haÿ-les-Roses":                  {},
+  "Chevilly-Larue":                    { tram: ["T7"] },
+  "Thiais - Orly":                     { rer: ["C"] },
+  "Aéroport d'Orly":                   { tram: ["T7"] },
+};
+
+// RER colors
+const RER_COLORS = {
+  A: { bg: "#E2231A", text: "#fff" },
+  B: { bg: "#5191CF", text: "#fff" },
+  C: { bg: "#F0CF02", text: "#000" },
+  D: { bg: "#00814F", text: "#fff" },
+  E: { bg: "#C261AF", text: "#fff" },
+};
+
+// Helper: get all stations of a line (trunk + branches + trunk2)
+function allStations(lineData) {
+  if (lineData.stations) return lineData.stations;
+  const s = [];
+  if (lineData.trunk) s.push(...lineData.trunk);
+  if (lineData.branches) lineData.branches.forEach(b => {
+    b.stations.forEach(st => { if (!s.includes(st)) s.push(st); });
+  });
+  if (lineData.trunk2) lineData.trunk2.forEach(st => { if (!s.includes(st)) s.push(st); });
+  return s;
+}
+
+// Build station→lines index automatically from LINES data (guarantees bilateral)
+const STATION_LINES = {};
+LINE_NAMES.forEach(l => {
+  allStations(LINES[l]).forEach(s => {
+    if (!STATION_LINES[s]) STATION_LINES[s] = [];
+    if (!STATION_LINES[s].includes(l)) STATION_LINES[s].push(l);
+  });
+});
+
+function corrBadgesHTML(stationName, currentLine) {
+  let badges = '';
+  // Metro lines — auto from index
+  const lines = STATION_LINES[stationName] || [];
+  lines.forEach(l => {
+    if (l === currentLine) return;
+    const ld = LINES[l];
+    if (!ld) return;
+    badges += `<span class="corr-badge" title="Ligne ${l}" style="background:${ld.color};color:${ld.text}">${l.toUpperCase()}</span>`;
+  });
+  // RER / tram / SNCF — from manual table
+  const c = CORRESPONDANCES[stationName];
+  if (c) {
+    if (c.rer) c.rer.forEach(r => {
+      const rc = RER_COLORS[r] || { bg: '#555', text: '#fff' };
+      badges += `<span class="corr-badge rer" style="background:${rc.bg};color:${rc.text}">RER ${r}</span>`;
+    });
+    if (c.tram) c.tram.forEach(t => {
+      badges += `<span class="corr-badge rer" style="background:#7B4F9E;color:#fff">${t}</span>`;
+    });
+    if (c.sncf) badges += `<span class="corr-badge rer" style="background:#C0392B;color:#fff">SNCF</span>`;
+  }
+  return badges;
+}
+
+
+// ========================
+// BROWSE MODE
+// ========================
+let selectedLine = null;
+let browseReversed = false;
+
+function initBrowse() {
+  const grid = document.getElementById('line-grid-browse');
+  grid.innerHTML = '';
+  LINE_NAMES.forEach(l => {
+    const d = LINES[l];
+    const chip = document.createElement('div');
+    chip.className = 'line-chip';
+    chip.style.background = d.color;
+    chip.style.color = d.text;
+    chip.textContent = l.toUpperCase();
+    chip.title = `Ligne ${l} — ${allStations(d).length} stations`;
+    chip.onclick = () => { browseReversed = false; showLine(l, chip); };
+    grid.appendChild(chip);
+  });
+}
+
+function stationRow(s, lineId, isFirst, isLast) {
+  const isTerminus = isFirst || isLast;
+  const badges = corrBadgesHTML(s, lineId);
+  return `
+    <div class="station-row">
+      <div class="rail-col">
+        <div class="rail-line${isFirst ? ' hidden' : ''}"></div>
+        <div class="rail-dot${isTerminus ? ' terminus-dot' : ''}"></div>
+        <div class="rail-line${isLast ? ' hidden' : ''}"></div>
+      </div>
+      <div class="station-info">
+        <div class="station-name${isTerminus ? ' is-terminus' : ''}">${s}</div>
+        ${badges ? `<div class="correspondances">${badges}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderDiagram(lineId) {
+  const d = LINES[lineId];
+
+  // Simple line (no branches)
+  if (d.stations) {
+    const stations = browseReversed ? [...d.stations].reverse() : d.stations;
+    return stations.map((s, i) => stationRow(s, lineId, i === 0, i === stations.length - 1)).join('');
+  }
+
+  // Branched line (with optional trunk2)
+  const trunk  = browseReversed ? [...d.trunk].reverse()  : d.trunk;
+  const trunk2 = d.trunk2 ? (browseReversed ? [...d.trunk2].reverse() : d.trunk2) : null;
+  const b0     = browseReversed ? [...d.branches[0].stations].reverse() : d.branches[0].stations;
+  const b1     = browseReversed ? [...d.branches[1].stations].reverse() : d.branches[1].stations;
+  const labels = [d.branches[0].label, d.branches[1].label];
+
+  let html = '';
+
+  if (browseReversed) {
+    // trunk2 → branches → trunk
+    if (trunk2) trunk2.forEach((s, i) => { html += stationRow(s, lineId, i === 0, false); });
+    html += `<div class="branch-split">`;
+    html += `<div class="branch-col"><div class="branch-label">${labels[0]}</div>`;
+    b0.forEach((s, i) => { html += stationRow(s, lineId, i === 0, false); });
+    html += `</div>`;
+    html += `<div class="branch-col"><div class="branch-label">${labels[1]}</div>`;
+    b1.forEach((s, i) => { html += stationRow(s, lineId, i === 0, false); });
+    html += `</div></div>`;
+    trunk.forEach((s, i) => { html += stationRow(s, lineId, false, i === trunk.length - 1); });
+  } else {
+    // trunk → branches → trunk2
+    trunk.forEach((s, i) => { html += stationRow(s, lineId, i === 0, false); });
+    html += `<div class="branch-split">`;
+    html += `<div class="branch-col"><div class="branch-label">${labels[0]}</div>`;
+    b0.forEach((s, i) => { html += stationRow(s, lineId, false, !trunk2 && i === b0.length - 1); });
+    html += `</div>`;
+    html += `<div class="branch-col"><div class="branch-label">${labels[1]}</div>`;
+    b1.forEach((s, i) => { html += stationRow(s, lineId, false, !trunk2 && i === b1.length - 1); });
+    html += `</div></div>`;
+    if (trunk2) trunk2.forEach((s, i) => { html += stationRow(s, lineId, false, i === trunk2.length - 1); });
+  }
+  return html;
+}
+
+function showLine(lineId, chipEl) {
+  document.querySelectorAll('.line-chip').forEach(c => c.classList.remove('selected'));
+  chipEl.classList.add('selected');
+  selectedLine = lineId;
+
+  const d = LINES[lineId];
+  const content = document.getElementById('browse-content');
+  const total = allStations(d).length;
+
+  // Terminus labels for the toggle
+  const termA = d.stations ? d.stations[0]
+    : (browseReversed ? d.branches[0].stations[d.branches[0].stations.length - 1] : d.trunk[0]);
+  const termB = d.stations ? d.stations[d.stations.length - 1]
+    : (browseReversed ? d.trunk[d.trunk.length - 1] : d.branches[0].stations[d.branches[0].stations.length - 1]);
+
+  content.innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px">
+      <div class="section-title" style="color:${d.color};margin-bottom:0">LIGNE ${lineId.toUpperCase()}</div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button class="dir-btn${!browseReversed ? ' dir-active' : ''}" style="--lc:${d.color}" onclick="setDirection('${lineId}', false)">${d.stations ? d.stations[0] : d.trunk[0]}</button>
+        <span style="color:var(--muted);font-size:0.8rem">→</span>
+        <button class="dir-btn${browseReversed ? ' dir-active' : ''}" style="--lc:${d.color}" onclick="setDirection('${lineId}', true)">${d.stations ? d.stations[d.stations.length-1] : d.trunk[d.trunk.length-1]}</button>
+      </div>
+    </div>
+    <div class="section-sub">${total} stations${d.branches ? ' · 2 branches' : ''}</div>
+    <div class="line-diagram" style="--line-col:${d.color}">
+      ${renderDiagram(lineId)}
+    </div>
+  `;
+}
+
+function setDirection(lineId, reversed) {
+  browseReversed = reversed;
+  const chipEl = document.querySelector('.line-chip.selected');
+  showLine(lineId, chipEl);
+}
+
+
+let quizQuestions = [];
+let qIndex = 0;
+let score = 0;
+let answered = false;
+let missed = [];
+
+function initQuizSelect() {
+  const sel = document.getElementById('q-line');
+  sel.innerHTML = '<option value="all">Toutes les lignes</option>';
+  LINE_NAMES.forEach(l => {
+    sel.innerHTML += `<option value="${l}">Ligne ${l.toUpperCase()}</option>`;
+  });
+}
+
+function startQuiz() {
+  const lineFilter = document.getElementById('q-line').value;
+  const qType = document.getElementById('q-type').value;
+  const qMode = document.getElementById('q-mode').value;
+  const qCount = parseInt(document.getElementById('q-count').value);
+
+  // Build question pool
+  let pool = [];
+  const lines = lineFilter === 'all' ? LINE_NAMES : [lineFilter];
+
+  lines.forEach(l => {
+    const d = LINES[l];
+    const stations = allStations(d);
+    if (qType === 'next') {
+      for (let i = 0; i < stations.length - 1; i++) {
+        pool.push({ type: 'next', line: l, given: stations[i], answer: stations[i+1], idx: i });
+      }
+    } else if (qType === 'prev') {
+      for (let i = 1; i < stations.length; i++) {
+        pool.push({ type: 'prev', line: l, given: stations[i], answer: stations[i-1], idx: i });
+      }
+    } else if (qType === 'line') {
+      stations.forEach((s, i) => {
+        const validLines = STATION_LINES[s] || [l];
+        pool.push({ type: 'line', line: l, given: s, answer: l, validAnswers: validLines, idx: i });
+      });
+    } else if (qType === 'order') {
+      for (let i = 0; i < stations.length - 3; i++) {
+        pool.push({ type: 'order', line: l, stations: stations.slice(i, i+4), idx: i });
+      }
+    }
+  });
+
+  // Shuffle & limit
+  pool = pool.sort(() => Math.random() - 0.5).slice(0, qCount);
+  quizQuestions = pool.map(q => ({ ...q, qMode }));
+  qIndex = 0; score = 0; missed = [];
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const area = document.getElementById('quiz-area');
+  if (qIndex >= quizQuestions.length) {
+    showResults();
+    return;
+  }
+  answered = false;
+  const q = quizQuestions[qIndex];
+  const d = LINES[q.line];
+  const total = quizQuestions.length;
+  const pct = (qIndex / total * 100).toFixed(0);
+
+  let questionText = '';
+  let subText = '';
+  let displayText = '';
+
+  if (q.type === 'next') {
+    questionText = 'Quelle est la station suivante ?';
+    const lineStations = allStations(LINES[q.line]);
+    subText = `Ligne ${q.line.toUpperCase()} • direction ${lineStations[lineStations.length-1]}`;
+    displayText = q.given;
+  } else if (q.type === 'prev') {
+    questionText = 'Quelle est la station précédente ?';
+    const lineStations = allStations(LINES[q.line]);
+    subText = `Ligne ${q.line.toUpperCase()} • direction ${lineStations[0]}`;
+    displayText = q.given;
+  } else if (q.type === 'line') {
+    questionText = 'Sur quelle ligne se trouve cette station ?';
+    subText = 'Indiquer le numéro de ligne';
+    displayText = q.given;
+  } else if (q.type === 'order') {
+    questionText = 'Remettre les stations dans l\'ordre';
+    subText = `Ligne ${q.line.toUpperCase()}`;
+    displayText = '?';
+  }
+
+  let answerHTML = '';
+
+  if (q.type === 'order') {
+    const shuffled = [...q.stations].sort(() => Math.random() - 0.5);
+    answerHTML = renderOrderQuestion(shuffled, q.stations, q);
+  } else if (q.qMode === 'qcm') {
+    const choices = buildChoices(q);
+    answerHTML = `<div class="answers-grid">
+      ${choices.map(c => `<button class="answer-btn" onclick="checkQCM(this,'${escQ(c)}','${escQ(q.answer)}')">${c}</button>`).join('')}
+    </div>`;
+  } else {
+    answerHTML = `<div class="answer-input-wrap">
+      <input class="answer-input" id="text-ans" placeholder="Votre réponse..." onkeydown="if(event.key==='Enter')checkText()">
+      <button class="submit-btn" onclick="checkText()">OK</button>
+    </div>`;
+  }
+
+  area.innerHTML = `
+    <div class="quiz-meta">
+      <span>Question ${qIndex+1} / ${total}</span>
+      <span class="score-badge">✓ ${score} / ${qIndex}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+    <div class="quiz-card" style="--line-color:${d.color}">
+      ${q.type !== 'line' ? `<div class="quiz-line-badge" style="background:${d.color};color:${d.text}">${q.line.toUpperCase()}</div>` : ''}
+      <div class="quiz-question">${questionText}</div>
+      ${q.type !== 'order' ? `<div class="quiz-station-display">${displayText}</div>` : ''}
+      <div class="quiz-hint">${subText}</div>
+      <div id="feedback" class="feedback"></div>
+      ${answerHTML}
+      <button class="next-btn" id="next-btn" style="display:none" onclick="nextQuestion()">
+        ${qIndex+1 < quizQuestions.length ? 'Question suivante →' : 'Voir les résultats'}
+      </button>
+    </div>
+  `;
+
+  if (q.qMode === 'text') {
+    setTimeout(() => document.getElementById('text-ans')?.focus(), 100);
+  }
+}
+
+function escQ(s) { return s.replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+function buildChoices(q) {
+  const correct = q.answer;
+  let wrong = [];
+
+  if (q.type === 'line') {
+    const validAnswers = q.validAnswers || [q.answer];
+    const otherLines = LINE_NAMES.filter(l => !validAnswers.includes(l));
+    wrong = otherLines.sort(() => Math.random() - 0.5).slice(0, 3);
+  } else {
+    // Pick stations from same or other lines
+    const allSt = LINE_NAMES.flatMap(l => allStations(LINES[l])).filter(s => s !== correct);
+    wrong = allSt.sort(() => Math.random() - 0.5).slice(0, 3);
+  }
+
+  return [...wrong, correct].sort(() => Math.random() - 0.5);
+}
+
+function renderOrderQuestion(shuffled, correct, q) {
+  const id = 'order-' + Date.now();
+  // Simple click-to-order
+  return `
+    <div style="width:100%;max-width:520px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;text-align:center">Cliquer dans le bon ordre :</div>
+      <div class="answers-grid" id="${id}-src">
+        ${shuffled.map((s,i) => `<button class="answer-btn" id="ob-${i}" data-station="${escQ(s)}" onclick="orderClick(this,'${id}',${JSON.stringify(correct).replace(/'/g,"\\'")})">${s}</button>`).join('')}
+      </div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;min-height:36px" id="${id}-chosen"></div>
+    </div>
+  `;
+}
+
+let orderChosen = [];
+function orderClick(btn, id, correct) {
+  if (answered) return;
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.style.opacity = '0.4';
+  orderChosen.push(btn.dataset.station);
+
+  const chosenDiv = document.getElementById(id + '-chosen');
+  const tag = document.createElement('span');
+  tag.className = 'station-tag';
+  tag.textContent = `${orderChosen.length}. ${btn.dataset.station}`;
+  chosenDiv.appendChild(tag);
+
+  if (orderChosen.length === correct.length) {
+    const isCorrect = orderChosen.every((s, i) => s === correct[i]);
+    const fb = document.getElementById('feedback');
+    if (isCorrect) {
+      fb.className = 'feedback ok'; fb.textContent = '✓ Bon ordre !';
+      score++;
+    } else {
+      fb.className = 'feedback ko';
+      fb.textContent = `✗ Ordre correct : ${correct.join(' → ')}`;
+      missed.push(correct.join(' → '));
+    }
+    answered = true;
+    orderChosen = [];
+    document.getElementById('next-btn').style.display = 'inline-block';
+  }
+}
+
+function checkQCM(btn, chosen, answer) {
+  if (answered) return;
+  answered = true;
+  const q = quizQuestions[qIndex];
+  const validAnswers = q.validAnswers || [answer];
+  const isOk = validAnswers.includes(chosen);
+
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach(b => {
+    b.disabled = true;
+    if (validAnswers.includes(b.textContent.trim())) b.classList.add('correct');
+  });
+  const fb = document.getElementById('feedback');
+  if (isOk) {
+    btn.classList.add('correct');
+    fb.className = 'feedback ok'; fb.textContent = '✓ Correct !';
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback ko'; fb.textContent = `✗ Bonne réponse : ${validAnswers.join(' ou ')}`;
+    missed.push(`${q.given} → ${validAnswers.join('/')}`);
+  }
+  document.getElementById('next-btn').style.display = 'inline-block';
+}
+
+function checkText() {
+  if (answered) return;
+  const inp = document.getElementById('text-ans');
+  if (!inp) return;
+  const val = inp.value.trim();
+  if (!val) return;
+  answered = true;
+
+  const q = quizQuestions[qIndex];
+  const validAnswers = q.validAnswers || [q.answer];
+  const given = normalize(val);
+  const isOk = validAnswers.some(a => {
+    const na = normalize(a);
+    return given === na || na.includes(given) || given.includes(na);
+  });
+
+  const fb = document.getElementById('feedback');
+  inp.disabled = true;
+  if (isOk) {
+    inp.classList.add('correct');
+    fb.className = 'feedback ok'; fb.textContent = '✓ Correct !';
+    score++;
+  } else {
+    inp.classList.add('wrong');
+    fb.className = 'feedback ko'; fb.textContent = `✗ Réponse : ${validAnswers.join(' ou ')}`;
+    missed.push(`${q.given} → ${validAnswers.join('/')}`);
+  }
+  document.getElementById('next-btn').style.display = 'inline-block';
+}
+
+function nextQuestion() {
+  qIndex++;
+  renderQuestion();
+}
+
+function showResults() {
+  const area = document.getElementById('quiz-area');
+  const pct = Math.round(score / quizQuestions.length * 100);
+  let emoji = pct >= 80 ? '🏆' : pct >= 50 ? '🙂' : '📚';
+  area.innerHTML = `
+    <div class="quiz-card results">
+      <h2>${emoji} RÉSULTATS</h2>
+      <div class="score-big">${pct}%</div>
+      <p>${score} bonnes réponses sur ${quizQuestions.length}</p>
+      ${missed.length > 0 ? `
+        <div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px">Stations à retravailler :</div>
+        <div class="missed-list">
+          ${missed.slice(0,20).map(m => `<span class="missed-tag">${m}</span>`).join('')}
+        </div>
+      ` : '<p style="color:#22c55e;margin-bottom:20px">Aucune erreur — parfait !</p>'}
+      <button class="start-btn" onclick="startQuiz()">↺ Recommencer</button>
+    </div>
+  `;
+}
+
+// ========================
+// MODE TOGGLE
+// ========================
+function setMode(mode) {
+  document.getElementById('browse-mode').style.display = mode === 'browse' ? 'block' : 'none';
+  document.getElementById('quiz-mode').style.display = mode === 'quiz' ? 'block' : 'none';
+  document.getElementById('btn-browse').classList.toggle('active', mode === 'browse');
+  document.getElementById('btn-quiz').classList.toggle('active', mode === 'quiz');
+}
+
+// INIT
+initBrowse();
+initQuizSelect();
+</script>
+</body>
+</html>
